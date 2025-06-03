@@ -1,0 +1,426 @@
+import feedparser
+import requests
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+import os
+from openai import OpenAI
+
+# Cargar variables de entorno
+load_dotenv()
+
+gmail_address = os.getenv("GMAIL_ADDRESS")
+gmail_password = os.getenv("GMAIL_PASSWORD")
+email_receiver = os.getenv("EMAIL_RECEIVER")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=openai_api_key)
+
+# Fuentes RSS
+rss_feeds = {
+    "The Economist": "https://www.economist.com/the-world-this-week/rss.xml",
+    "Reuters": "http://feeds.reuters.com/reuters/businessNews",
+    "Gestión Perú": "https://gestion.pe/arcio/rss/",
+    "Wall Street Journal": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "Forbes": "https://www.forbes.com/business/feed/",
+    "Forbes México": "https://www.forbes.com.mx/feed/",
+    "New York Times": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+}
+
+def resumir_noticia(titulo, descripcion, link):
+    try:
+        prompt = f"Resume en español como boletín profesional para ejecutivos de negocios esta noticia:\n\nTítulo: {titulo}\nDescripción: {descripcion}\nEnlace: {link}\n\nDebe ser breve pero informativo, como para alguien que quiere estar al tanto sin entrar al detalle completo."
+        respuesta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Eres un asistente experto en negocios que redacta boletines ejecutivos."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        return respuesta.choices[0].message.content.strip()
+    except Exception as e:
+        return f"[Error al resumir la noticia: {e}]"
+
+def obtener_resumenes():
+    resumenes = []
+    for fuente, url in rss_feeds.items():
+        feed = feedparser.parse(url)
+        noticias = feed.entries[:2]
+        for entrada in noticias:
+            titulo = entrada.title
+            descripcion = entrada.summary if "summary" in entrada else ""
+            link = entrada.link
+            resumen = resumir_noticia(titulo, descripcion, link)
+            resumenes.append((fuente, titulo, resumen, link))
+    return resumenes
+
+def enviar_email(resumenes):
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = "📊 Resumen Diario de Noticias de Negocios"
+    mensaje["From"] = gmail_address
+    mensaje["To"] = email_receiver
+
+    cuerpo_html = """
+    <html>
+    <body>
+    <h2>📰 Resumen Diario de Noticias de Negocios</h2>
+    <p>Hola Germán, aquí tienes el resumen de las principales noticias de negocios de hoy:</p>
+    """
+
+    for fuente, titulo, resumen, link in resumenes:
+        cuerpo_html += f"""
+        <hr>
+        <h3>{fuente}</h3>
+        <p><strong>{titulo}</strong></p>
+        <p>{resumen}</p>
+        <p><a href="{link}" target="_blank">Leer más</a></p>
+        """
+
+    cuerpo_html += """
+    <br>
+    <p style="font-size:small; color:gray;">Este es un resumen automatizado generado con IA.</p>
+    </body>
+    </html>
+    """
+
+    parte_html = MIMEText(cuerpo_html, "html")
+    mensaje.attach(parte_html)
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(gmail_address, gmail_password)
+        server.sendmail(gmail_address, email_receiver, mensaje.as_string())
+
+if __name__ == "__main__":
+    print("📡 Obteniendo noticias y generando resumen...")
+    resumenes = obtener_resumenes()
+    print("✉️ Enviando correo...")
+    enviar_email(resumenes)
+    print("✅ Resumen enviado correctamente.")
+
+import requests
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+import os
+from openai import OpenAI
+
+# Cargar variables de entorno
+load_dotenv()
+
+gmail_address = os.getenv("GMAIL_ADDRESS")
+gmail_password = os.getenv("GMAIL_PASSWORD")
+email_receiver = os.getenv("EMAIL_RECEIVER")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=openai_api_key)
+
+# Fuentes RSS
+rss_feeds = {
+    "The Economist": "https://www.economist.com/the-world-this-week/rss.xml",
+    "Reuters": "http://feeds.reuters.com/reuters/businessNews",
+    "Gestión Perú": "https://gestion.pe/arcio/rss/",
+    "Wall Street Journal": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "Forbes": "https://www.forbes.com/business/feed/",
+    "Forbes México": "https://www.forbes.com.mx/feed/",
+    "New York Times": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+}
+
+def resumir_noticia(titulo, descripcion, link):
+    try:
+        prompt = f"Resume en español como boletín profesional para ejecutivos de negocios esta noticia:\n\nTítulo: {titulo}\nDescripción: {descripcion}\nEnlace: {link}\n\nDebe ser breve pero informativo, como para alguien que quiere estar al tanto sin entrar al detalle completo."
+        respuesta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Eres un asistente experto en negocios que redacta boletines ejecutivos."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        return respuesta.choices[0].message.content.strip()
+    except Exception as e:
+        return f"[Error al resumir la noticia: {e}]"
+
+def obtener_resumenes():
+    resumenes = []
+    for fuente, url in rss_feeds.items():
+        feed = feedparser.parse(url)
+        noticias = feed.entries[:2]
+        for entrada in noticias:
+            titulo = entrada.title
+            descripcion = entrada.summary if "summary" in entrada else ""
+            link = entrada.link
+            resumen = resumir_noticia(titulo, descripcion, link)
+            resumenes.append((fuente, titulo, resumen, link))
+    return resumenes
+
+def enviar_email(resumenes):
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = "📊 Resumen Diario de Noticias de Negocios"
+    mensaje["From"] = gmail_address
+    mensaje["To"] = email_receiver
+
+    cuerpo_html = """
+    <html>
+    <body>
+    <h2>📰 Resumen Diario de Noticias de Negocios</h2>
+    <p>Hola Germán, aquí tienes el resumen de las principales noticias de negocios de hoy:</p>
+    """
+
+    for fuente, titulo, resumen, link in resumenes:
+        cuerpo_html += f"""
+        <hr>
+        <h3>{fuente}</h3>
+        <p><strong>{titulo}</strong></p>
+        <p>{resumen}</p>
+        <p><a href="{link}" target="_blank">Leer más</a></p>
+        """
+
+    cuerpo_html += """
+    <br>
+    <p style="font-size:small; color:gray;">Este es un resumen automatizado generado con IA.</p>
+    </body>
+    </html>
+    """
+
+    parte_html = MIMEText(cuerpo_html, "html")
+    mensaje.attach(parte_html)
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(gmail_address, gmail_password)
+        server.sendmail(gmail_address, email_receiver, mensaje.as_string())
+
+if __name__ == "__main__":
+    print("📡 Obteniendo noticias y generando resumen...")
+    resumenes = obtener_resumenes()
+    print("✉️ Enviando correo...")
+    enviar_email(resumenes)
+    print("✅ Resumen enviado correctamente.")
+import requests
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+import os
+from openai import OpenAI
+
+# Cargar variables de entorno
+load_dotenv()
+
+gmail_address = os.getenv("GMAIL_ADDRESS")
+gmail_password = os.getenv("GMAIL_PASSWORD")
+email_receiver = os.getenv("EMAIL_RECEIVER")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=openai_api_key)
+
+# Fuentes RSS
+rss_feeds = {
+    "The Economist": "https://www.economist.com/the-world-this-week/rss.xml",
+    "Reuters": "http://feeds.reuters.com/reuters/businessNews",
+    "Gestión Perú": "https://gestion.pe/arcio/rss/",
+    "Wall Street Journal": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "Forbes": "https://www.forbes.com/business/feed/",
+    "Forbes México": "https://www.forbes.com.mx/feed/",
+    "New York Times": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+}
+
+def resumir_noticia(titulo, descripcion, link):
+    try:
+        prompt = f"Resume en español como boletín profesional para ejecutivos de negocios esta noticia:\n\nTítulo: {titulo}\nDescripción: {descripcion}\nEnlace: {link}\n\nDebe ser breve pero informativo, como para alguien que quiere estar al tanto sin entrar al detalle completo."
+        respuesta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Eres un asistente experto en negocios que redacta boletines ejecutivos."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+        return respuesta.choices[0].message.content.strip()
+    except Exception as e:
+        return f"[Error al resumir la noticia: {e}]"
+
+def obtener_resumenes():
+    resumenes = []
+    for fuente, url in rss_feeds.items():
+        feed = feedparser.parse(url)
+        noticias = feed.entries[:2]
+        for entrada in noticias:
+            titulo = entrada.title
+            descripcion = entrada.summary if "summary" in entrada else ""
+            link = entrada.link
+            resumen = resumir_noticia(titulo, descripcion, link)
+            resumenes.append((fuente, titulo, resumen, link))
+    return resumenes
+
+def enviar_email(resumenes):
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = "📊 Resumen Diario de Noticias de Negocios"
+    mensaje["From"] = gmail_address
+    mensaje["To"] = email_receiver
+
+    cuerpo_html = """
+    <html>
+    <body>
+    <h2>📰 Resumen Diario de Noticias de Negocios</h2>
+    <p>Hola Germán, aquí tienes el resumen de las principales noticias de negocios de hoy:</p>
+    """
+
+    for fuente, titulo, resumen, link in resumenes:
+        cuerpo_html += f"""
+        <hr>
+        <h3>{fuente}</h3>
+        <p><strong>{titulo}</strong></p>
+        <p>{resumen}</p>
+        <p><a href="{link}" target="_blank">Leer más</a></p>
+        """
+
+    cuerpo_html += """
+    <br>
+    <p style="font-size:small; color:gray;">Este es un resumen automatizado generado con IA.</p>
+    </body>
+    </html>
+    """
+
+    parte_html = MIMEText(cuerpo_html, "html")
+    mensaje.attach(parte_html)
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(gmail_address, gmail_password)
+        server.sendmail(gmail_address, email_receiver, mensaje.as_string())
+
+if __name__ == "__main__":
+    print("📡 Obteniendo noticias y generando resumen...")
+    resumenes = obtener_resumenes()
+    print("✉️ Enviando correo...")
+    enviar_email(resumenes)
+    print("✅ Resumen enviado correctamente.")import feedparser
+from openai import OpenAI
+import requests
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
+import os
+
+# Cargar las variables del entorno
+load_dotenv()
+
+gmail_address = os.getenv("GMAIL_ADDRESS")
+gmail_password = os.getenv("GMAIL_PASSWORD")
+email_receiver = os.getenv("EMAIL_RECEIVER")
+
+# Fuentes RSS
+rss_feeds = {
+    "The Economist": "https://www.economist.com/the-world-this-week/rss.xml",
+    "Reuters": "http://feeds.reuters.com/reuters/businessNews",
+    "Gestión Perú": "https://gestion.pe/arcio/rss/",
+    "Wall Street Journal": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "Forbes": "https://www.forbes.com/business/feed/",
+    "Forbes México": "https://www.forbes.com.mx/feed/",
+    "New York Times": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"
+}
+
+from openai import OpenAI
+
+client = OpenAI()
+
+def obtener_noticias(limit=10):
+    noticias = []
+    for fuente, url in rss_feeds.items():
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:2]:  # 2 noticias por fuente
+            titulo = entry.get("title", "")
+            descripcion = entry.get("summary", "")
+            link = entry.get("link", "")
+            resumen = resumir_noticia(titulo, descripcion, link, fuente)
+            noticias.append(resumen)
+            if len(noticias) >= limit:
+                return noticias
+    return noticias
+
+def obtener_noticias(limit=10):
+    resúmenes = []
+    for fuente, url in rss_feeds.items():
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:2]:  # 2 noticias por fuente
+            título = entry.get("title", "")
+            descripción = entry.get("summary", "")
+            link = entry.get("link", "")
+            resumen = resumir_noticia(título, descripción, link)
+            resúmenes.append(f"📰 **{fuente}**\n{resumen}\n🔗 {link}\n")
+            if len(resúmenes) >= limit:
+                return resúmenes
+    return resúmenes
+
+def enviar_email(resumenes):
+    mensaje = MIMEMultipart("alternative")
+    mensaje["Subject"] = "🧠 Resumen diario de noticias de negocios"
+    mensaje["From"] = gmail_address
+    mensaje["To"] = email_receiver
+
+    # Estilos HTML para el boletín
+    html_inicio = """
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; color: #333; padding: 20px; }
+        .noticia { background-color: #ffffff; border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .medio { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .titulo { font-size: 18px; font-weight: bold; margin: 5px 0; color: #222; }
+        .resumen { font-size: 15px; margin: 10px 0 10px 0; }
+        .fecha { font-size: 13px; color: #555; }
+        .link { font-size: 14px; color: #1a73e8; text-decoration: none; }
+      </style>
+    </head>
+    <body>
+    <h2>🧠 Resumen diario de noticias de negocios</h2>
+    """
+
+    html_fin = """
+    </body>
+    </html>
+    """
+
+    html_cuerpo = ""
+    for resumen in resumenes:
+        fuente = resumen.get("fuente", "Medio desconocido")
+        titulo = resumen.get("titulo", "")
+        cuerpo = resumen.get("resumen", "")
+        fecha = resumen.get("fecha", "")
+        link = resumen.get("link", "#")
+        html_cuerpo += f"""
+        <div class="noticia">
+          <div class="medio">{fuente}</div>
+          <div class="titulo">{titulo}</div>
+          <div class="resumen">{cuerpo}</div>
+          <div class="fecha">{fecha}</div>
+          <a class="link" href="{link}">Leer más</a>
+        </div>
+        """
+
+    contenido_html = html_inicio + html_cuerpo + html_fin
+    parte_html = MIMEText(contenido_html, "html")
+    mensaje.attach(parte_html)
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(gmail_address, gmail_password)
+        server.sendmail(gmail_address, email_receiver, mensaje.as_string())
+
+# Ejecutar
+if __name__ == "__main__":
+    print("📡 Obteniendo noticias y generando resumen...")
+    resumenes = obtener_noticias()
+    print("✉️ Enviando correo...")
+    enviar_email(resumenes)
+    print("✅ Correo enviado con éxito.")
