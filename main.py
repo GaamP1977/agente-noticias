@@ -53,21 +53,31 @@ def clasificar_y_traducir(titulo, descripcion):
 
 def obtener_resumenes():
     resumenes = {"Tecnología": [], "Negocios": [], "Economía": []}
+    titulos_vistos = set()
+
     for url in rss_feeds:
-        feed = feedparser.parse(url)
-        for entrada in feed.entries[:5]:
-            try:
+        try:
+            feed = feedparser.parse(url)
+            for entrada in feed.entries:
+                titulo_normalizado = entrada.title.strip().lower()
+                if titulo_normalizado in titulos_vistos:
+                    continue
+                titulos_vistos.add(titulo_normalizado)
+
                 resultado = clasificar_y_traducir(entrada.title, entrada.get("summary", ""))
                 categoria = resultado["categoria"]
-                if categoria in resumenes and len(resumenes[categoria]) < 7:
+
+                if categoria in resumenes and len(resumenes[categoria]) < 15:
                     resumenes[categoria].append({
                         "titulo": resultado["titulo"],
                         "resumen": resultado["resumen"],
                         "link": entrada.link,
                         "fuente": feed.feed.get("title", "Fuente desconocida")
                     })
-            except Exception:
-                continue
+        except Exception as e:
+            print(f"Error procesando {url}: {e}")
+            continue
+
     return resumenes
 
 def enviar_email(resumenes):
@@ -104,4 +114,3 @@ def enviar_email(resumenes):
 if __name__ == "__main__":
     resumenes = obtener_resumenes()
     enviar_email(resumenes)
-
