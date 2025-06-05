@@ -2,6 +2,7 @@ import os
 import feedparser
 import smtplib
 import ssl
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -41,15 +42,27 @@ def clasificar_y_traducir(titulo, descripcion):
     prompt = (
         f"Clasifica la siguiente noticia en una de estas categorías: Tecnología, Negocios, Economía. "
         f"Traduce el título y el resumen al español neutral si están en otro idioma. "
-        f"Responde en formato JSON así: "
+        f"Responde solo en formato JSON así: "
         f'{{"categoria": "...", "titulo": "...", "resumen": "..."}}\n\n'
         f"Título: {titulo}\nDescripción: {descripcion}"
     )
-    respuesta = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return eval(respuesta.choices[0].message.content)
+
+    try:
+        respuesta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=300
+        )
+        contenido = respuesta.choices[0].message.content
+        resultado = json.loads(contenido)
+        if all(clave in resultado for clave in ("categoria", "titulo", "resumen")):
+            return resultado
+        else:
+            raise ValueError("Respuesta JSON incompleta")
+    except Exception as e:
+        print(f"Error en clasificar_y_traducir: {e}")
+        return None
 
 def obtener_resumenes():
     resumenes = {"Tecnología": [], "Negocios": [], "Economía": []}
@@ -65,6 +78,9 @@ def obtener_resumenes():
                 titulos_vistos.add(titulo_normalizado)
 
                 resultado = clasificar_y_traducir(entrada.title, entrada.get("summary", ""))
+                if resultado is None:
+                    continue
+
                 categoria = resultado["categoria"]
                 if categoria in resumenes and len(resumenes[categoria]) < 15:
                     resumenes[categoria].append({
@@ -77,6 +93,10 @@ def obtener_resumenes():
             print(f"Error procesando {url}: {e}")
             continue
 
+    # Verificación final
+    print("Noticias recopiladas:")
+    for categoria, noticias in resumenes.items():
+        print(f"{categoria}: {len(noticias)} noticias")
     return resumenes
 
 def enviar_email(resumenes):
@@ -90,14 +110,17 @@ def enviar_email(resumenes):
     html += '<h2 style="text-align:center;">Centro de Noticias GaamP</h2>'
     for categoria in ["Tecnología", "Negocios", "Economía"]:
         html += f'<h3 style="color:#003366;">🗂️ {categoria}</h3><ul>'
-        for noticia in resumenes[categoria]:
-            html += f'''
-                <li>
-                    <strong>{noticia["titulo"]}</strong><br>
-                    <em>{noticia["resumen"]}</em><br>
-                    <a href="{noticia["link"]}">Leer más</a> - <span style="color:gray;">{noticia["fuente"]}</span>
-                </li><br>
-            '''
+        if resumenes[categoria]:
+            for noticia in resumenes[categoria]:
+                html += f'''
+                    <li>
+                        <strong>{noticia["titulo"]}</strong><br>
+                        <em>{noticia["resumen"]}</em><br>
+                        <a href="{noticia["link"]}">Leer más</a> - <span style="color:gray;">{noticia["fuente"]}</span>
+                    </li><br>
+                '''
+        else:
+            html += "<li style='color:gray;'>No se encontraron noticias relevantes hoy.</li>"
         html += "</ul><hr>"
     html += "<p style='font-size:12px;color:gray;'>Enviado automáticamente por el Agente de Noticias GaamP</p>"
     html += "</body></html>"
