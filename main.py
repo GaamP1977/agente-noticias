@@ -66,7 +66,6 @@ def obtener_resumenes():
 
                 resultado = clasificar_y_traducir(entrada.title, entrada.get("summary", ""))
                 categoria = resultado["categoria"]
-
                 if categoria in resumenes and len(resumenes[categoria]) < 15:
                     resumenes[categoria].append({
                         "titulo": resultado["titulo"],
