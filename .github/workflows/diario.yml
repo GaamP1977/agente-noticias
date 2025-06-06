@@ -1,8 +1,8 @@
-name: Agente de Noticias Diario
+name: 🧠 Agente de Noticias Diario
 
 on:
   schedule:
-    - cron: '15 12 * * *'  # 6:15 a.m. hora México (UTC-6)
+    - cron: '15 12 * * *'  # 6:15 a.m. hora CDMX (UTC-6)
   workflow_dispatch:       # Permite ejecución manual
 
 jobs:
