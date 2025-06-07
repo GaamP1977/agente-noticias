@@ -2,7 +2,7 @@ name: 🧠 Agente de Noticias Diario
 
 on:
   schedule:
-    - cron: '20 12 * * *'  # 6:20 a.m. hora CDMX, temporal para reactivación
+    - cron: '20 12 * * *'  # 6:20 a.m. hora CDMX (UTC-6)
   workflow_dispatch:       # Permite ejecución manual
 
 jobs:
