@@ -38,6 +38,16 @@ rss_feeds = [
     "https://www.ey.com/en_gl/insights/rss",
 ]
 
+def cargar_noticias_procesadas():
+    if os.path.exists("procesadas.json"):
+        with open("procesadas.json", "r", encoding="utf-8") as f:
+            return set(json.load(f))
+    return set()
+
+def guardar_noticias_procesadas(titulos):
+    with open("procesadas.json", "w", encoding="utf-8") as f:
+        json.dump(list(titulos), f, ensure_ascii=False, indent=2)
+
 def clasificar_y_traducir(titulo, descripcion):
     prompt = (
         f"Clasifica la siguiente noticia en una de estas categorías: Tecnología, Negocios, Economía. "
@@ -66,7 +76,7 @@ def clasificar_y_traducir(titulo, descripcion):
 
 def obtener_resumenes():
     resumenes = {"Tecnología": [], "Negocios": [], "Economía": []}
-    titulos_vistos = set()
+    titulos_vistos = cargar_noticias_procesadas()
 
     for url in rss_feeds:
         try:
@@ -93,7 +103,8 @@ def obtener_resumenes():
             print(f"Error procesando {url}: {e}")
             continue
 
-    # Verificación final
+    guardar_noticias_procesadas(titulos_vistos)
+
     print("Noticias recopiladas:")
     for categoria, noticias in resumenes.items():
         print(f"{categoria}: {len(noticias)} noticias")
