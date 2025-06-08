@@ -2,7 +2,7 @@ name: 🧠 Agente de Noticias Diario
 
 on:
   schedule:
-    - cron: '20 11 * * *'  # 6:20 a.m. hora CDMX (UTC-6 fijo, sin horario de verano)
+    - cron: '20 11 * * *'  # 6:20 a.m. hora CDMX (UTC-6)
   workflow_dispatch:       # Permite ejecución manual
 
 jobs:
@@ -34,9 +34,12 @@ jobs:
         run: python main.py
 
       - name: Guardar archivo de noticias enviadas
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
           git pull origin main
           git add noticias_enviadas.txt
           git commit -m "Actualizar noticias enviadas" || echo "Sin cambios para commitear"
