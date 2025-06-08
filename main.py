@@ -147,3 +147,9 @@ def enviar_email(resumenes):
 if __name__ == "__main__":
     resumenes = obtener_resumenes()
     enviar_email(resumenes)
+
+    # Guardar los títulos enviados en el archivo
+    with open("noticias_enviadas.txt", "w") as f:
+        for categoria in resumenes:
+            for noticia in resumenes[categoria]:
+                f.write(noticia["titulo"].strip().lower() + "\n")
