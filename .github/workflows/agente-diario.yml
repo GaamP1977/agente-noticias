@@ -32,3 +32,12 @@ jobs:
 
       - name: Ejecutar agente
         run: python main.py
+
+      - name: Guardar archivo de noticias enviadas
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git pull origin main
+          git add noticias_enviadas.txt
+          git commit -m "Actualizar noticias enviadas" || echo "Sin cambios para commitear"
+          git push origin main
